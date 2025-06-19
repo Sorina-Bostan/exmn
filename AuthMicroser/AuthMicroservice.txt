@@ -1,0 +1,114 @@
+package com.sd.laborator
+
+import java.io.*
+import java.net.ServerSocket
+import java.net.Socket
+import kotlin.concurrent.thread
+import kotlin.system.exitProcess
+
+class AuthMicroservice {
+    private val allowedStudentIDs: MutableSet<String> = mutableSetOf()
+    private lateinit var authSocket: ServerSocket
+    private lateinit var messageManagerSocket: Socket
+
+    companion object Constants {
+        const val AUTH_PORT = 1700
+        const val MESSAGE_MANAGER_PORT = 1500
+        val MESSAGE_MANAGER_HOST = System.getenv("MESSAGE_MANAGER_HOST") ?: "localhost"
+    }
+
+    init {
+        try {
+            File("allowed_students.txt").forEachLine { line ->
+                if (line.isNotBlank()) {
+                    allowedStudentIDs.add(line.trim())
+                }
+            }
+        } catch (e: Exception) {
+            println("Nu s-a putut încărca din fișier allowed_students.txt: ${e.message}")
+            exitProcess(1)
+        }
+    }
+
+    private fun isAuthorized(id: String): Boolean {
+        return allowedStudentIDs.contains(id)
+    }
+
+    private fun connectToMessageManager() {
+        try {
+            messageManagerSocket = Socket(MESSAGE_MANAGER_HOST, MESSAGE_MANAGER_PORT)
+            println("Conectat la Message Manager")
+        } catch (e: Exception) {
+            println("Eroare la conectarea cu Message Manager: ${e.message}")
+            exitProcess(1)
+        }
+    }
+
+    fun run() {
+        connectToMessageManager()
+        authSocket = ServerSocket(AUTH_PORT)
+        println("Microserviciul Auth ascultă pe portul ${AUTH_PORT}")
+
+        while (true) {
+            val clientConnection = authSocket.accept()
+            println("Client conectat: ${clientConnection.inetAddress.hostAddress}:${clientConnection.port}")
+
+            thread {
+                try {
+                    val reader = BufferedReader(InputStreamReader(clientConnection.getInputStream()))
+                    val writer = BufferedWriter(OutputStreamWriter(clientConnection.getOutputStream()))
+
+                    val receivedMessage = reader.readLine()
+
+                    if (receivedMessage == null) {
+                        println("Clientul a închis conexiunea.")
+                        clientConnection.close()
+                        return@thread
+                    }
+
+                    val parts = receivedMessage.split(" ", limit = 3)
+                    if (parts.size < 2) {
+                        writer.write("Mesaj invalid\n")
+                        writer.flush()
+                        return@thread
+                    }
+
+                    val senderID = parts[1]
+                    if (isAuthorized(senderID)) {
+                        println("-> $senderID este AUTORIZAT. Transmit mesajul...")
+
+                        // Trimitem mesajul la message manager
+                        val msgWriter = BufferedWriter(OutputStreamWriter(messageManagerSocket.getOutputStream()))
+                        msgWriter.write(receivedMessage + "\n")
+                        msgWriter.flush()
+
+                        // Răspunsul de la manager
+                        val msgReader = BufferedReader(InputStreamReader(messageManagerSocket.getInputStream()))
+                        val responseFromManager = msgReader.readLine()
+
+                        writer.write("$responseFromManager\n")
+                        writer.flush()
+
+                        println("<- Răspuns trimis clientului ${clientConnection.port}")
+                    } else {
+                        println("-> $senderID este NEAUTORIZAT.")
+                        writer.write("Acces Refuzat: ID-ul nu este permis.\n")
+                        writer.flush()
+                    }
+
+                } catch (e: Exception) {
+                    println("Eroare cu clientul ${clientConnection.port}: ${e.message}")
+                } finally {
+                    if (!clientConnection.isClosed) {
+                        clientConnection.close()
+                    }
+                }
+            }
+        }
+    }
+}
+
+fun main() {
+    val authMicroservice = AuthMicroservice()
+    authMicroservice.run()
+}
