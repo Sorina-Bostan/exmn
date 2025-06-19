@@ -1,0 +1,47 @@
+package com.sd.laborator.services
+
+import com.sd.laborator.helpers.MyPasswordEncoderFactory // <-- Importăm fabrica!
+import com.sd.laborator.pojo.User
+import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.stereotype.Service
+import java.util.concurrent.ConcurrentHashMap
+
+@Service
+class UserService {
+    private val users = ConcurrentHashMap<String, User>()
+    
+    // Alegem algoritmul de hashing pe care îl vom folosi
+    private val encodingId = "bcrypt" 
+    
+    // Cerem fabricii encoder-ul specific. Dacă nu îl găsește, aplicația va crăpa la pornire (fail-fast).
+    private val passwordEncoder: PasswordEncoder = MyPasswordEncoderFactory.getEncoder(encodingId)!!
+
+    fun register(username: String, password: String): Boolean {
+        if (users.containsKey(username)) {
+            return false
+        }
+        // Folosim encoder-ul obținut de la fabrică
+        val passwordHash = passwordEncoder.encode(password)
+        
+        // Stocăm hash-ul, dar și ID-ul algoritmului folosit! Este foarte important.
+        // Vom adăuga prefixul {bcrypt} la hash.
+        val storedHash = "{$encodingId}$passwordHash"
+        
+        users[username] = User(username, storedHash)
+        println("Registered user: $username with encoder '$encodingId'")
+        return true
+    }
+
+    fun login(username: String, password: String): Boolean {
+        val user = users[username]
+        if (user == null) return false
+
+        // Aici este magia. Metoda `matches` a fabricii (sau a unui DelegatingPasswordEncoder)
+        // ar ști să extragă {bcrypt} din hash și să folosească encoder-ul corect.
+        // Pentru a simplifica, vom folosi direct encoder-ul nostru.
+        // ATENȚIE: Trebuie să comparăm cu hash-ul FĂRĂ prefix.
+        val hashFromStorage = user.passwordHash.substringAfter("}")
+        
+        return passwordEncoder.matches(password, hashFromStorage)
+    }
+}

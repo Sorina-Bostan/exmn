@@ -1,0 +1,3 @@
+package com.sd.laborator.pojo
+// userId este un simplu String, nu are legătură directă cu User din celălalt serviciu
+data class Expense(val userId: String, val category: String, val description: String, val amount: Double)

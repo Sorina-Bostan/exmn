@@ -1,0 +1,19 @@
+package com.sd.laborator.services
+
+import com.sd.laborator.pojo.Expense
+import org.springframework.stereotype.Service
+import java.util.concurrent.ConcurrentHashMap
+
+@Service
+class ExpenseService {
+    private val expenses = ConcurrentHashMap<String, MutableList<Expense>>()
+
+    fun addExpense(expense: Expense) {
+        expenses.computeIfAbsent(expense.userId) { mutableListOf() }.add(expense)
+        println("Added expense for user ${expense.userId}: ${expense.description}")
+    }
+
+    fun getExpensesForUser(userId: String): List<Expense> {
+        return expenses[userId] ?: emptyList()
+    }
+}

@@ -1,0 +1,5 @@
+Sub-Modulele (fiecare este un microserviciu):
+user-service (modul)
+expense-service (modul)
+encryption-service (modul)
+message-library (modul, dacă vrei să o separi)

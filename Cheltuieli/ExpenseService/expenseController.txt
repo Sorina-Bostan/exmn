@@ -1,0 +1,26 @@
+package com.sd.laborator.controllers
+
+import com.sd.laborator.pojo.Expense
+import com.sd.laborator.services.ExpenseService
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.*
+
+@RestController
+class ExpenseController {
+    @Autowired
+    private lateinit var expenseService: ExpenseService
+
+    @PostMapping("/expense")
+    fun addExpense(@RequestBody expense: Expense): ResponseEntity<Unit> {
+        expenseService.addExpense(expense)
+        return ResponseEntity(HttpStatus.CREATED)
+    }
+
+    @GetMapping("/expenses/{userId}")
+    fun getExpenses(@PathVariable userId: String): ResponseEntity<List<Expense>> {
+        val userExpenses = expenseService.getExpensesForUser(userId)
+        return ResponseEntity.ok(userExpenses)
+    }
+}
