@@ -1,0 +1,12 @@
+/*Ce face: Anunță întregului sistem: "Un utilizator tocmai a intrat (online) sau a ieșit (offline)".
+Cine îl trimite: Fiecare ClientMicroservice trimite acest mesaj:
+O dată la pornire, cu status: "online".
+O dată chiar înainte de a se închide, cu status: "offline".*/
+
+package com.sd.laborator.model
+
+data class PresenceMessage(
+    val tip_mesaj: String = "prezenta",
+    val userId: String,
+    val status: String // "online" sau "offline"
+)

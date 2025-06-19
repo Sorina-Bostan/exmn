@@ -1,0 +1,25 @@
+package com.sd.laborator.services
+
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.sd.laborator.model.ChatMessage
+import com.sd.laborator.model.PresenceMessage
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.kafka.core.KafkaTemplate
+import org.springframework.stereotype.Service
+
+@Service
+class KafkaProducerService {
+    @Autowired
+    private lateinit var kafkaTemplate: KafkaTemplate<String, String>
+    private val mapper = jacksonObjectMapper()
+
+    fun sendChatMessage(message: ChatMessage) {
+        val jsonMessage = mapper.writeValueAsString(message)
+        kafkaTemplate.send("mesaje_intrare", jsonMessage)
+    }
+
+    fun sendPresenceMessage(message: PresenceMessage) {
+        val jsonMessage = mapper.writeValueAsString(message)
+        kafkaTemplate.send("prezenta", jsonMessage)
+    }
+}

@@ -1,0 +1,9 @@
+package com.sd.laborator.model
+
+data class ChatMessage(
+    val tip_mesaj: String = "chat",
+    val expeditor: String,
+    val continut: String,
+    val tip_trimitere: String, // "broadcast" sau "multicast"
+    val nume_grup: String? = null
+)

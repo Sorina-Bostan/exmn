@@ -1,0 +1,11 @@
+/*lowProcessor menține o structură de date internă (un HashMap sau ConcurrentHashMap) numită groups. Cheia este numele grupului, iar valoarea este lista de membri.
+Când primește un GroupMessage, el adaugă sau suprascrie intrarea pentru acel grup în HashMap-ul său.
+Fără această listă de grupuri, FlowProcessor nu ar ști cui să trimită mesajele de multicast. Când primește un mesaj de multicast pentru "grup_olimpici", el se va uita în HashMap-ul groups, va lua lista de membri și le va trimite mesajul doar lor.*/
+
+package com.sd.laborator.model
+
+data class GroupMessage(
+    val tip_mesaj: String = "definire_grup",
+    val nume_grup: String,
+    val membri: List<String>
+)

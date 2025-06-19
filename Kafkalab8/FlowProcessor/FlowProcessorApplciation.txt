@@ -1,0 +1,68 @@
+package com.sd.laborator
+
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.sd.laborator.model.ChatMessage
+import com.sd.laborator.model.GroupMessage
+import com.sd.laborator.model.PresenceMessage
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.runApplication
+import org.springframework.kafka.annotation.KafkaListener
+import org.springframework.kafka.core.KafkaTemplate
+import org.springframework.stereotype.Component
+import java.util.concurrent.ConcurrentHashMap
+
+@SpringBootApplication
+class FlowProcessorApplication
+
+fun main(args: Array<String>) {
+    runApplication<FlowProcessorApplication>(*args)
+}
+
+@Component
+class MessageRouter {
+    @Autowired
+    private lateinit var kafkaTemplate: KafkaTemplate<String, String>
+    private val mapper = jacksonObjectMapper()
+    private val activeUsers: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    private val groups: ConcurrentHashMap<String, List<String>> = ConcurrentHashMap()
+
+    @KafkaListener(topics = ["mesaje_intrare"], groupId = "flow_processor_group")
+    fun handleIncomingMessage(message: String) {
+        try {
+            val chatMessage: ChatMessage = mapper.readValue(message)
+            println("Processing chat message from ${chatMessage.expeditor}")
+            when (chatMessage.tip_trimitere) {
+                "broadcast" -> {
+                    activeUsers.forEach { user -> 
+                        if (user != chatMessage.expeditor) { // Nu trimite mesajul înapoi la expeditor
+                            kafkaTemplate.send("mesaje_general", "[BROADCAST] ${chatMessage.expeditor}: ${chatMessage.continut}")
+                        }
+                    }
+                }
+                "multicast" -> {
+                    groups[chatMessage.nume_grup]?.forEach { member ->
+                        if (member != chatMessage.expeditor) { // Nu trimite mesajul înapoi la expeditor
+                           kafkaTemplate.send("mesaje_multicast", "[${chatMessage.nume_grup}] ${chatMessage.expeditor}: ${chatMessage.continut}")
+                        }
+                    } ?: println("Group ${chatMessage.nume_grup} not found.")
+                }
+            }
+        } catch (e: Exception) { println("Could not parse chat message: $message. Error: ${e.message}") }
+    }
+
+    @KafkaListener(topics = ["prezenta"], groupId = "flow_processor_group")
+    fun handlePresenceMessage(message: String) {
+        val presenceMessage: PresenceMessage = mapper.readValue(message)
+        if (presenceMessage.status == "online") activeUsers.add(presenceMessage.userId) else activeUsers.remove(presenceMessage.userId)
+        println("User ${presenceMessage.status.toUpperCase()}: ${presenceMessage.userId}. Total active: ${activeUsers.size}")
+    }
+
+    @KafkaListener(topics = ["management_grupuri"], groupId = "flow_processor_group")
+    fun handleGroupMessage(message: String) {
+        val groupMessage: GroupMessage = mapper.readValue(message)
+        groups[groupMessage.nume_grup] = groupMessage.membri
+        println("Group DEFINED/UPDATED: ${groupMessage.nume_grup} with members ${groupMessage.membri}")
+    }
+}

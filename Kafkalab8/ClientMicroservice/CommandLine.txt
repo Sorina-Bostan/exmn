@@ -1,0 +1,43 @@
+package com.sd.laborator.components
+
+import com.sd.laborator.model.ChatMessage
+import com.sd.laborator.model.PresenceMessage
+import com.sd.laborator.services.KafkaProducerService
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.CommandLineRunner
+import org.springframework.stereotype.Component
+import javax.annotation.PostConstruct
+import kotlin.system.exitProcess
+
+@Component
+class CommandLineInterface : CommandLineRunner {
+    @Autowired
+    private lateinit var producerService: KafkaProducerService
+    private val userId = System.getenv("USER_ID") ?: "user${(1..100).random()}"
+
+    @PostConstruct
+    fun announcePresence() {
+        producerService.sendPresenceMessage(PresenceMessage(userId = userId, status = "online"))
+        println("User '$userId' is now online.")
+    }
+
+    override fun run(vararg args: String?) {
+        println("\nCommands: send-broadcast <message> | send-multicast <group> <message> | exit")
+        while (true) {
+            print("> Enter command: ")
+            val line = readLine()
+            if (line.isNullOrEmpty() || line.equals("exit", ignoreCase = true)) {
+                producerService.sendPresenceMessage(PresenceMessage(userId = userId, status = "offline"))
+                println("User '$userId' is going offline. Bye!")
+                break
+            }
+            val parts = line.split(" ", limit = 3)
+            when (parts.getOrNull(0)) {
+                "send-broadcast" -> if (parts.size > 1) producerService.sendChatMessage(ChatMessage(expeditor = userId, continut = parts[1], tip_trimitere = "broadcast")) else println("Usage: send-broadcast <message>")
+                "send-multicast" -> if (parts.size > 2) producerService.sendChatMessage(ChatMessage(expeditor = userId, continut = parts[2], tip_trimitere = "multicast", nume_grup = parts[1])) else println("Usage: send-multicast <group> <message>")
+                else -> println("Unknown command.")
+            }
+        }
+        exitProcess(0)
+    }
+}

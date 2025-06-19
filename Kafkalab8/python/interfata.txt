@@ -1,0 +1,37 @@
+from flask import Flask, render_template, request, redirect, url_for
+from kafka import KafkaProducer
+import json
+
+app = Flask(__name__)
+
+# Configurare producator Kafka
+producer = KafkaProducer(
+    bootstrap_servers='localhost:9092',
+    value_serializer=lambda v: json.dumps(v).encode('utf-8')
+)
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        group_name = request.form['group_name']
+        # Preluam membrii si ii separam prin virgula, eliminand spatiile
+        members = [member.strip() for member in request.form['members'].split(',')]
+        
+        group_message = {
+            "tip_mesaj": "definire_grup",
+            "nume_grup": group_name,
+            "membri": members
+        }
+        
+        # Trimitem mesajul pe topicul Kafka
+        producer.send('management_grupuri', group_message)
+        producer.flush() # Asiguram trimiterea
+        
+        print(f"Sent group definition: {group_message}")
+        
+        return redirect(url_for('index'))
+        
+    return render_template('index.html')
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5001)
