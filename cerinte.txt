@@ -1,0 +1,45 @@
+
+AuthMicroser - SPLSD-78 Pornind de la laboratorul 8 se introduce un microserviciu care monitorizeaza
+ comunicatia si nu permite ca aceasta sa se desfăşoare decât dacă id-ul
+ student se află în lista lui (introdusă de asistent). La prezentare se 
+va arăta diagrama de servicii si apoi cea de clase asociate implementarii
+ fiecarui serviciu și se va explica aceasta împreună cu gradul de respectare
+ a principiilor Solid pentru microservicii dar si solid pentru clase in cazul 
+in care implementarea unui serviciu este mai complicata. Apoi va urma discuția pe
+ cod. Microserviciile conform definitiei unui microserviciu vor fi fiecare in masina lor virtuala.
+
+
+Cheltuieli  - SPLSD-72
+ Pornind de la laboratorul 4 
+proiectaţi (deci diagramă de servicii şi diagramă de clase) şi implementaţi
+ o aplicaţie cu servicii RESTful pentru gestiunea cheltuielilor curente pentru
+ membrii a unei familii. Fiecare membru va avea contul lui accesibil printr-un
+ nume și parolă. Vor exista următoarele categorii de cheltuieli: (întreținere,
+ mâncare, distracție, scoală şi personale (e.g. îmbrăcat, încălțat, tuns...).
+ La prezentare se va arăta diagrama de servicii si apoi cea de clase asociate
+ implementarii fiecarui serviciu și se va explica aceasta împreună cu gradul de
+ respectare a principiilor Solid pentru microservicii dar si solid pentru clase
+ in cazul in care implementarea unui serviciu este mai complicata. Apoi va urma
+ discuția pe cod. Microserviciile conform definitive unui microserviciu vor fi 
+fiecare in masina lor virtuala.
+
+
+Kafkalab8 - SPLSD-42
+Pornind de la aplicația exemplu de chat 
+din laboratorul 8, să se modifice aceasta 
+prin introducerea unui procesor de flux (microserviciu) care 
+implementează broadcast-ul (unul la toți) şi unul care implementează
+ multicast-ul (unul la mai mulți trebuie să existe posibilitatea creării
+ unui subliste de profesori - cu ajutorul altui serviciu de tip web care 
+permite sa facem selectia si sa dam mesajul din navigator si care va comunica 
+cu restul prin tcp). Deci, aplicația suportă mai mulți profesori. Pentru 
+comunicatie intre microservicii se va utiliza kafka si ontologii. Microserviciile
+ conform definitiei unui microserviciu vor fi fiecare in masina lor 
+virtuala. Dacă se consideră necesar se mai pot crea oricâte servicii 
+se doreşte conform gândirii studentului. Se va utiliza coregrafia şi 
+respectarea principiilor SOLID pentru microservicii. La prezentare se 
+va arăta diagrama de servicii si apoi cea de clase asociate implementarii 
+fiecarui serviciu şi se va explica aceasta împreună cu gradul de respectare 
+a principiilor Solid pentru microservicii dar si solid pentru clase in
+ cazul in care implementarea unui serviciu este mai complicata. Apoi 
+va urma discuția pe cod.
