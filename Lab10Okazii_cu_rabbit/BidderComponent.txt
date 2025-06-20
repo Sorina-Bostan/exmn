@@ -1,0 +1,49 @@
+package com.sd.laborator.components
+
+import com.sd.laborator.model.AuctionResult
+import com.sd.laborator.model.Bid
+import org.springframework.amqp.core.*
+import org.springframework.amqp.rabbit.annotation.RabbitListener
+import org.springframework.amqp.rabbit.core.RabbitAdmin
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.CommandLineRunner
+import org.springframework.context.annotation.Profile
+import org.springframework.stereotype.Component
+import java.time.Instant
+import java.util.*
+import kotlin.random.Random
+
+@Profile("bidder")
+@Component
+class BidderComponent : CommandLineRunner {
+    @Autowired private lateinit var config: RabbitMqConfigComponent
+    @Autowired private lateinit var amqpTemplate: AmqpTemplate
+    @Autowired private lateinit var rabbitAdmin: RabbitAdmin
+
+    private val bidderId: String = "Bidder-${UUID.randomUUID().toString().take(8)}"
+    private val resultQueue: Queue = AnonymousQueue()
+
+    // Metoda de ascultare pentru rezultate
+    @RabbitListener(queues = ["#{resultQueue.name}"])
+    fun receiveResult(result: AuctionResult) {
+        if (result.winnerId == this.bidderId) {
+            println("[$bidderId] AM CÂȘTIGAT cu ${result.winningBid}!")
+        } else {
+            println("[$bidderId] Am pierdut. Câștigătorul a fost ${result.winnerId}.")
+        }
+        System.exit(0) // Ieșim după ce am primit rezultatul
+    }
+    
+    // Metoda rulată la pornirea componentei
+    override fun run(vararg args: String?) {
+        // Creează legătura la exchange-ul de rezultate
+        rabbitAdmin.declareQueue(resultQueue)
+        rabbitAdmin.declareBinding(BindingBuilder.bind(resultQueue).to(FanoutExchange(config.RESULTS_EXCHANGE)))
+        
+        // Trimite o ofertă aleatorie
+        val amount = Random.nextInt(100, 1000)
+        val bid = Bid(bidderId, amount, Instant.now().toEpochMilli())
+        amqpTemplate.convertAndSend(config.BIDS_EXCHANGE, config.BIDS_ROUTING_KEY, bid)
+        println("[$bidderId] Am trimis oferta de $amount. Aștept rezultatul...")
+    }
+}

@@ -1,0 +1,19 @@
+// Bid.kt
+package com.sd.laborator.model
+import java.io.Serializable
+
+data class Bid(
+    val bidderId: String,
+    val amount: Int,
+    val timestamp: Long
+) : Serializable
+
+// AuctionResult.kt
+package com.sd.laborator.model
+import java.io.Serializable
+
+data class AuctionResult(
+    val winnerId: String,
+    val winningBid: Int,
+    val message: String
+) : Serializable

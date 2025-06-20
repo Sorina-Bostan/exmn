@@ -1,0 +1,51 @@
+package com.sd.laborator.components
+
+import com.sd.laborator.model.Bid
+import org.springframework.amqp.core.AmqpTemplate
+import org.springframework.amqp.rabbit.annotation.RabbitListener
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Profile
+import org.springframework.scheduling.annotation.EnableScheduling
+import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.stereotype.Component
+import java.time.Instant
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
+
+@Profile("auctioneer")
+@Component
+@EnableScheduling
+class AuctioneerComponent {
+    @Autowired private lateinit var config: RabbitMqConfigComponent
+    @Autowired private lateinit var amqpTemplate: AmqpTemplate
+    
+    private val collectedBids = mutableListOf<Bid>()
+    private val lock = ReentrantLock()
+    private var lastBidTimestamp: Long = 0
+    private val inactivityTimeoutMs = 15_000L
+
+    @RabbitListener(queues = ["\${okazii.queue.bids}"])
+    fun receiveMessage(bid: Bid) {
+        lock.withLock {
+            val bidWithTimestamp = bid.copy(timestamp = Instant.now().toEpochMilli())
+            collectedBids.add(bidWithTimestamp)
+            lastBidTimestamp = bidWithTimestamp.timestamp
+            println("AUCTIONEER: Ofertă de ${bid.amount} de la ${bid.bidderId} a fost primită.")
+        }
+    }
+    
+    private fun sendBidsToProcessing() {
+        println("AUCTIONEER: Timp de inactivitate atins. Se trimit ${collectedBids.size} oferte la procesare.")
+        amqpTemplate.convertAndSend(config.PROCESSING_EXCHANGE, config.PROCESSING_ROUTING_KEY, ArrayList(collectedBids))
+        collectedBids.clear()
+    }
+    
+    @Scheduled(fixedRate = 2000)
+    fun checkForAuctionEnd() {
+        lock.withLock {
+            if (collectedBids.isNotEmpty() && (Instant.now().toEpochMilli() - lastBidTimestamp > inactivityTimeoutMs)) {
+                sendBidsToProcessing()
+            }
+        }
+    }
+}

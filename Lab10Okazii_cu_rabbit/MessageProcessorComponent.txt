@@ -1,0 +1,24 @@
+package com.sd.laborator.components
+
+import com.sd.laborator.model.Bid
+import org.springframework.amqp.core.AmqpTemplate
+import org.springframework.amqp.rabbit.annotation.RabbitListener
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Profile
+import org.springframework.stereotype.Component
+
+@Profile("message_processor")
+@Component
+class MessageProcessorComponent {
+    @Autowired private lateinit var config: RabbitMqConfigComponent
+    @Autowired private lateinit var amqpTemplate: AmqpTemplate
+
+    @RabbitListener(queues = ["\${okazii.queue.processing}"])
+    fun receiveMessage(bids: ArrayList<Bid>) {
+        println("MESSAGE_PROCESSOR: Primit ${bids.size} oferte.")
+        val uniqueBids = bids.groupBy { it.bidderId }.map { (_, userBids) -> userBids.maxByOrNull { it.amount }!! }
+        val sortedBids = uniqueBids.sortedBy { it.timestamp }
+        println("MESSAGE_PROCESSOR: Procesare încheiată. ${sortedBids.size} oferte unice trimise mai departe.")
+        amqpTemplate.convertAndSend(config.PROCESSED_BIDS_EXCHANGE, config.PROCESSED_BIDS_ROUTING_KEY, sortedBids)
+    }
+}

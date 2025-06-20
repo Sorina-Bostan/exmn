@@ -1,0 +1,25 @@
+# Configurare generală conexiune RabbitMQ
+spring.rabbitmq.host=localhost
+spring.rabbitmq.port=5672
+spring.rabbitmq.username=guest
+spring.rabbitmq.password=guest
+spring.jackson.default-property-inclusion=non_null
+
+# --- Definirea topologiei Okazii ---
+# 1. Bidder -> Auctioneer
+okazii.exchange.bids=bids_exchange
+okazii.queue.bids=bids_queue
+okazii.routingkey.bids=bid.new
+
+# 2. Auctioneer -> MessageProcessor
+okazii.exchange.processing=processing_exchange
+okazii.queue.processing=processing_queue
+okazii.routingkey.processing=auction.ended
+
+# 3. MessageProcessor -> BiddingProcessor
+okazii.exchange.processed_bids=processed_bids_exchange
+okazii.queue.processed_bids=processed_bids_queue
+okazii.routingkey.processed_bids=bids.processed
+
+# 4. BiddingProcessor -> Bidder (Broadcast)
+okazii.exchange.results=results_exchange
