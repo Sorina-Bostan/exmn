@@ -1,0 +1,31 @@
+package com.sd.laborator
+
+import org.springframework.amqp.core.FanoutExchange
+import org.springframework.amqp.core.Queue
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+
+@Configuration
+class RabbitMQConfig {
+
+    // Citim numele cozii de business
+    @Value("\${exemplu.rabbitmq.queue.business}")
+    private lateinit var businessQueueName: String
+
+    // NOU: Citim numele exchange-ului de monitorizare
+    @Value("\${exemplu.rabbitmq.exchange.monitoring}")
+    private lateinit var monitoringExchangeName: String
+
+    // Bean pentru coada de business
+    @Bean
+    fun businessQueue(): Queue {
+        return Queue(businessQueueName, true)
+    }
+
+    // NOU: Bean pentru exchange-ul de monitorizare
+    @Bean
+    fun monitoringExchange(): FanoutExchange {
+        return FanoutExchange(monitoringExchangeName)
+    }
+}

@@ -1,0 +1,11 @@
+# Conexiune la serverul RabbitMQ
+spring.rabbitmq.host=localhost
+spring.rabbitmq.port=5672
+spring.rabbitmq.username=guest
+spring.rabbitmq.password=guest
+
+# Definirea cozii pentru fluxul de business
+exemplu.rabbitmq.queue.business=queue_business
+
+# NOU: Definirea exchange-ului pentru fluxul de monitorizare
+exemplu.rabbitmq.exchange.monitoring=exchange_monitoring

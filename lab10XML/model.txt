@@ -1,0 +1,12 @@
+package com.sd.laborator
+
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
+import java.io.Serializable
+import java.time.LocalDateTime
+
+@JacksonXmlRootElement(localName = "Status")
+data class StatusMessage(
+    val processorName: String,
+    val message: String,
+    val timestamp: String = LocalDateTime.now().toString()
+) : Serializable

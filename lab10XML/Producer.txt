@@ -1,0 +1,34 @@
+package com.sd.laborator
+
+import org.springframework.amqp.core.AmqpTemplate
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.stereotype.Component
+
+@Component
+class BusinessProducer {
+    @Autowired
+    private lateinit var amqpTemplate: AmqpTemplate
+
+    @Value("\${exemplu.rabbitmq.queue.business}")
+    private lateinit var businessQueueName: String
+    
+    // Injectăm și numele exchange-ului de monitorizare
+    @Value("\${exemplu.rabbitmq.exchange.monitoring}")
+    private lateinit var monitoringExchangeName: String
+
+    fun send(message: String) {
+        // 1. Trimite mesajul de business, ca înainte
+        amqpTemplate.convertAndSend("", businessQueueName, message)
+        println("PRODUCER: Am trimis mesajul de business: '$message'")
+
+        // 2. NOU: Trimite mesajul de status
+        val statusMessage = StatusMessage(
+            processorName = "BusinessProducer",
+            message = "A trimis mesajul: '$message'"
+        )
+        // Mesajele către un fanout exchange se trimit fără routing key specific (al doilea parametru gol)
+        amqpTemplate.convertAndSend(monitoringExchangeName, "", statusMessage)
+        println("PRODUCER: Am trimis status de monitorizare.")
+    }
+}

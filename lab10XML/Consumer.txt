@@ -1,0 +1,33 @@
+package com.sd.laborator
+
+import org.springframework.amqp.core.AmqpTemplate
+import org.springframework.amqp.rabbit.annotation.RabbitHandler
+import org.springframework.amqp.rabbit.annotation.RabbitListener
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.stereotype.Component
+
+@Component
+@RabbitListener(queues = ["\${exemplu.rabbitmq.queue.business}"])
+class BusinessConsumer {
+
+    // NOU: Injectăm template-ul pentru a putea trimite mesaje de status
+    @Autowired
+    private lateinit var amqpTemplate: AmqpTemplate
+
+    @Value("\${exemplu.rabbitmq.exchange.monitoring}")
+    private lateinit var monitoringExchangeName: String
+
+    @RabbitHandler
+    fun processMessage(message: String) {
+        println("CONSUMER: Am consumat urmatorul mesaj: $message")
+
+        // NOU: Trimite un status despre ce a făcut
+        val statusMessage = StatusMessage(
+            processorName = "BusinessConsumer",
+            message = "A consumat mesajul: '$message'"
+        )
+        amqpTemplate.convertAndSend(monitoringExchangeName, "", statusMessage)
+        println("CONSUMER: Am trimis status de monitorizare.")
+    }
+}

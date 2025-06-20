@@ -1,0 +1,13 @@
+package com.sd.laborator
+
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.runApplication
+import org.springframework.scheduling.annotation.EnableScheduling
+
+@SpringBootApplication
+@EnableScheduling // Adnotare necesară pentru a activa task-urile programate
+class MonitoredApp
+
+fun main(args: Array<String>) {
+    runApplication<MonitoredApp>(*args)
+}

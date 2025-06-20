@@ -1,0 +1,72 @@
+package com.sd.laborator
+
+import com.fasterxml.jackson.dataformat.xml.XmlMapper
+import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator
+import org.springframework.amqp.core.*
+import org.springframework.amqp.rabbit.annotation.RabbitListener
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Bean
+import org.springframework.scheduling.annotation.EnableScheduling
+import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.stereotype.Component
+import java.io.File
+import java.util.concurrent.ConcurrentLinkedQueue
+
+@Component
+@EnableScheduling // Activăm rularea de task-uri programate
+class MonitoringConsumer {
+
+    // Coadă thread-safe pentru a stoca statusurile primite între scrieri
+    private val collectedStatuses = ConcurrentLinkedQueue<StatusMessage>()
+    
+    // Mapper-ul pentru a converti obiectele în XML
+    private val xmlMapper = XmlMapper().apply {
+        configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true)
+    }
+    private val reportFile = File("monitoring_report.xml")
+
+    // Numele cozii va fi generat automat de Spring, fiind anonimă
+    // Asta asigură că fiecare instanță a monitorului are propria coadă
+    @Bean
+    fun monitoringQueue(): Queue {
+        return AnonymousQueue()
+    }
+
+    // Facem legătura (Binding) între coada anonimă și Fanout Exchange
+    // Astfel, coada noastră va primi o copie a tuturor mesajelor trimise la exchange
+    @Bean
+    fun bindMonitoringQueueToExchange(
+        @Autowired monitoringQueue: Queue,
+        @Autowired monitoringExchange: FanoutExchange
+    ): Binding {
+        return BindingBuilder.bind(monitoringQueue).to(monitoringExchange)
+    }
+
+    // Listener-ul care ascultă coada anonimă de monitorizare
+    // Numele cozii este referit prin SpEL (Spring Expression Language): "#{beanName.methodName}"
+    @RabbitListener(queues = ["#{monitoringQueue.name}"])
+    fun receiveStatus(message: StatusMessage) {
+        println("MONITOR: Primit status de la [${message.processorName}]")
+        collectedStatuses.add(message)
+    }
+
+    // Metodă care rulează la fiecare 15 secunde
+    @Scheduled(fixedRate = 15000)
+    fun writeReportToXml() {
+        if (collectedStatuses.isEmpty()) {
+            return
+        }
+
+        println("MONITOR: Se scriu ${collectedStatuses.size} statusuri noi în fișierul XML...")
+        try {
+            val statusesToWrite = collectedStatuses.toList()
+            // Încapsulăm lista într-un obiect rădăcină pentru un XML valid și frumos formatat
+            xmlMapper.writerWithDefaultPrettyPrinter().writeValue(reportFile, object {
+                val statuses = statusesToWrite
+            })
+            println("MONITOR: Raportul a fost actualizat cu succes.")
+        } catch (e: Exception) {
+            println("MONITOR: Eroare la scrierea fișierului XML: ${e.message}")
+        }
+    }
+}
