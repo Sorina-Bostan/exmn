@@ -1,0 +1,107 @@
+package com.sd.laborator
+
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.*
+import kotlin.concurrent.thread
+import kotlin.system.exitProcess
+
+class TeacherMicroservice {
+    private lateinit var messageManagerSocket: Socket
+    private lateinit var teacherMicroserviceServerSocket: ServerSocket
+
+    companion object Constants {
+        val MESSAGE_MANAGER_HOST = System.getenv("MESSAGE_MANAGER_HOST") ?: "localhost"
+        const val MESSAGE_MANAGER_PORT = 1500
+        const val TEACHER_PORT = 1600
+        // NOU: Portul serviciului de monitorizare
+        const val MONITOR_SERVICE_PORT = 1700
+    }
+
+    // NOU: Funcție helper pentru a raporta erori
+    private fun reportError(destination: String, errorCode: String, errorDetails: String?) {
+        try {
+            // Se creează o nouă conexiune TCP doar pentru a trimite raportul
+            val monitorSocket = Socket(MESSAGE_MANAGER_HOST, MONITOR_SERVICE_PORT)
+            monitorSocket.use {
+                // Format: "<SOURCE_SERVICE>|<DEST_ADDRESS>|<ERROR_CODE>|<ERROR_DETAILS>"
+                val errorMessage = "TeacherMicroservice|${destination}|${errorCode}|${errorDetails ?: "N/A"}\n"
+                it.getOutputStream().write(errorMessage.toByteArray())
+                println("Am trimis raport de eroare către serviciul de monitorizare.")
+            }
+        } catch (e: Exception) {
+            // Dacă nici serviciul de monitorizare nu poate fi contactat, afișăm local
+            println("NU S-A PUTUT RAPORTA EROAREA: Nu ma pot conecta la ErrorMonitoringService. ${e.message}")
+        }
+    }
+
+    private fun subscribeToMessageManager() {
+        try {
+            messageManagerSocket = Socket(MESSAGE_MANAGER_HOST, MESSAGE_MANAGER_PORT)
+            messageManagerSocket.soTimeout = 3000 // Setează un timeout pentru a detecta erori
+            println("M-am conectat la MessageManager!")
+        } catch (e: Exception) {
+            println("Nu ma pot conecta la MessageManager! ${e.message}")
+            // Aici raportăm eroarea de conexiune la MessageManager
+            reportError("${MESSAGE_MANAGER_HOST}:${MESSAGE_MANAGER_PORT}", "ECONNREFUSED", e.message)
+            exitProcess(1)
+        }
+    }
+
+    public fun run() {
+        subscribeToMessageManager()
+        teacherMicroserviceServerSocket = ServerSocket(TEACHER_PORT)
+        println("TeacherMicroservice se executa pe portul: ${teacherMicroserviceServerSocket.localPort}")
+        println("Se asteapta cereri (intrebari)...")
+
+        while (true) {
+            val clientConnection = teacherMicroserviceServerSocket.accept()
+            thread {
+                println("S-a primit o cerere de la: ${clientConnection.inetAddress.hostAddress}:${clientConnection.port}")
+                val clientBufferReader = BufferedReader(InputStreamReader(clientConnection.inputStream))
+                
+                try {
+                    val receivedQuestion = clientBufferReader.readLine()
+                    val questionToSend = "intrebare ${messageManagerSocket.localPort} $receivedQuestion\n"
+                    println("Trimit catre MessageManager: $questionToSend")
+                    
+                    // Trimiterea întrebării către MessageManager
+                    messageManagerSocket.getOutputStream().write(questionToSend.toByteArray())
+
+                    // Așteptarea răspunsului
+                    val messageManagerBufferReader = BufferedReader(InputStreamReader(messageManagerSocket.inputStream))
+                    val receivedResponse = messageManagerBufferReader.readLine()
+
+                    if (receivedResponse == null) {
+                        throw SocketException("MessageManager a închis conexiunea.")
+                    }
+
+                    println("Am primit raspunsul: \"$receivedResponse\"")
+                    clientConnection.getOutputStream().write((receivedResponse + "\n").toByteArray())
+
+                } catch (e: SocketTimeoutException) {
+                    val errorMessage = "Nu a venit niciun raspuns in timpul util."
+                    println(errorMessage)
+                    clientConnection.getOutputStream().write("Nu a raspuns nimeni la intrebare\n".toByteArray())
+                    // Raportăm eroarea de timeout
+                    reportError("${MESSAGE_MANAGER_HOST}:${MESSAGE_MANAGER_PORT}", "ETIMEDOUT", "Timeout la așteptarea răspunsului de la MessageManager.")
+                } catch (e: Exception) { // Prindem și alte erori posibile (ex: SocketException)
+                    val errorMessage = "Eroare de comunicare cu MessageManager: ${e.message}"
+                    println(errorMessage)
+                    try {
+                        clientConnection.getOutputStream().write("A apărut o eroare de sistem.\n".toByteArray())
+                    } catch (writeErr: Exception) { /* Ignorăm dacă nu putem scrie înapoi clientului */ }
+                    // Raportăm eroarea generică
+                    reportError("${MESSAGE_MANAGER_HOST}:${MESSAGE_MANAGER_PORT}", "EGENERIC", e.message)
+                } finally {
+                    clientConnection.close()
+                }
+            }
+        }
+    }
+}
+
+fun main() {
+    val teacherMicroservice = TeacherMicroservice()
+    teacherMicroservice.run()
+}

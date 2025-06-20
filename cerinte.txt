@@ -53,3 +53,9 @@ conform gândirii studentului. Se vor respecta principiile SOLID pentru
 microservicii. La prezentare se va arăta diagrama de clase și se va
 explica aceasta împreună cu gradul de respectare a principiilor. Apoi
 va urma discuția pe cod.
+
+Lab8_cu_erori - trebuie sa plec de la aplicatia de chat din lab 8, sa se 
+modifice aceasta astfel incat sa se introduca un procesor de flux care sa 
+realizeze statistici cu privire la erorile de comunicare (SPECIFICE TCP) si 
+tipul acestora care au aparut( daca au aparut) si apoi sa se scrie aceste informatii
+ intr o baza de date local respectivului microserviciu (SQL LITE DE EX) microserviciile conform definitiei unui microserviciu vor fi fiecar ein masina lor virtuala. daca se considera necesar se mai pot crea oricate servicii se doreste conform gandirii studentului. se va utiliza coregrafia si respectarea principiilor SOLID pentru microservicii.
