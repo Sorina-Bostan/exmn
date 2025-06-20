@@ -1,0 +1,35 @@
+package com.sd.laborator.processor11
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.runApplication
+import org.springframework.cloud.stream.function.StreamBridge
+import org.springframework.context.annotation.Bean
+import java.util.function.Consumer
+
+@SpringBootApplication
+class StateProcessor11Application {
+    @Autowired
+    private lateinit var streamBridge: StreamBridge
+
+    @Bean
+    fun processState11(): Consumer<String> {
+        return Consumer { bit ->
+            println("STATE 11 received bit: $bit. SEQUENCE DETECTED! Output is 1.")
+            
+            // Trimite output-ul curent (1) la Sink
+            streamBridge.send("output-topic", "1")
+            
+            // Rutează bitul către starea următoare
+            if (bit == "1") {
+                streamBridge.send("topic_stare_01", bit)
+            } else { // bit == "0"
+                streamBridge.send("topic_stare_10", bit)
+            }
+        }
+    }
+}
+
+fun main(args: Array<String>) {
+    runApplication<StateProcessor11Application>(*args)
+}

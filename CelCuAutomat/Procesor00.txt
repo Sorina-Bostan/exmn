@@ -1,0 +1,35 @@
+package com.sd.laborator.processor00
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.runApplication
+import org.springframework.cloud.stream.function.StreamBridge
+import org.springframework.context.annotation.Bean
+import java.util.function.Consumer
+
+@SpringBootApplication
+class StateProcessor00Application {
+    @Autowired
+    private lateinit var streamBridge: StreamBridge
+
+    @Bean
+    fun processState00(): Consumer<String> {
+        return Consumer { bit ->
+            println("STATE 00 received bit: $bit. Output is 0.")
+            
+            // Trimite output-ul curent (0) la Sink
+            streamBridge.send("output-topic", "0")
+            
+            // Rutează bitul către starea următoare
+            if (bit == "1") {
+                streamBridge.send("topic_stare_01", bit)
+            } else { // bit == "0"
+                streamBridge.send("topic_stare_10", bit)
+            }
+        }
+    }
+}
+
+fun main(args: Array<String>) {
+    runApplication<StateProcessor00Application>(*args)
+}

@@ -1,0 +1,24 @@
+package com.sd.laborator.source
+
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.runApplication
+import org.springframework.context.annotation.Bean
+import java.util.function.Supplier
+import kotlin.random.Random
+
+@SpringBootApplication
+class BitStreamSourceApplication {
+
+    @Bean
+    fun sendBit(): Supplier<String> {
+        return Supplier {
+            val bit = Random.nextInt(0, 2).toString()
+            println("--- SOURCE: Sending bit -> $bit ---")
+            bit
+        }
+    }
+}
+
+fun main(args: Array<String>) {
+    runApplication<BitStreamSourceApplication>(*args)
+}
